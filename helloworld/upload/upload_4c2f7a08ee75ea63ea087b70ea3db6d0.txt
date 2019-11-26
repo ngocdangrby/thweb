@@ -1,0 +1,90 @@
+// 1.
+// 1.1
+CREATE USER 'user_17020077'@'localhost' IDENTIFIED BY '17020077';
+
+
+//1.2
+GRANT SELECT ON classicmodels.products TO 'user_17020077'@'localhost';
+
+
+//1.3
+mysql -u root -p
+use mysql;
+ALTER USER '17020077'@'localhost' IDENTIFIED BY 'new_17020077';
+
+
+//2.View
+//2.1
+SELECT * FROM sys.views
+//2.2
+
+create view view_products_gt_10 as
+select * from products
+where quantityInStock >= 10;
+
+//3.Function
+DELIMITER $$ 
+CREATE FUNCTION sumSellingInMonth(pCode INT, year INT, month INT) 
+RETURNS double
+BEGIN
+	DECLARE r_value double;
+	SELECT SUM(orderdetails.quantityOrdered * orderdetails.priceEach)
+	FROM orderdetails JOIN orders ON orders.orderNumber = orderdetails.orderNumber
+	WHERE month(orders.orderDate) = month
+		AND YEAR(orders.orderDate) = year
+		AND orderdetails.productCode = pCode
+	INTO r_value;
+	RETURN r_value;
+END $$
+DELIMITER ;
+
+//4. Trigger
+//4.1
+
+create table product_history (
+   productCode INT NOT NULL,
+   countSellingTimes INT NOT NULL,
+   PRIMARY KEY ( productCode )
+);
+
+//4.2
+DELIMITER $$
+CREATE TRIGGER buy_trigger AFTER INSERT
+ON products
+FOR EACH ROW
+BEGIN
+	declare prevTime int;
+
+	select h.countSellingTimes into prevTime 
+	from product_history 
+	where h.productCode = new.productCode;
+
+	if prevTime is null then
+		INSERT INTO product_history VALUES(new.productCode, 1);
+	else
+		UPDATE product_history
+		SET countSellingTimes = prevTime + 1
+		WHERE product_history.productCode = NEW.productCode;
+	end if;
+END $$
+DELIMITER ;
+
+
+//5. Backup
+
+SELECT orderNumber, productCode, quantityOrdered, priceEach, orderLineNumber,
+IFNULL(orderNumber,'NULL_VALUE'), IFNULL(productCode,'NULL_VALUE'), IFNULL(quantityOrdered,'NULL_VALUE'), IFNULL(priceEach,'NULL_VALUE'), IFNULL(orderLineNumber,'NULL_VALUE') FROM orderdetails
+
+INTO OUTFILE 'C:/tmp/orderdetails.csv' 
+FIELDS ENCLOSED BY '"' 
+TERMINATED BY ';' 
+ESCAPED BY '"' 
+LINES TERMINATED BY '\r\n';
+
+//6. Replication
+
+RESET SLAVE ALL;
+CHANGE MASTER TO MASTER_HOST='127.0.0.1', MASTER_USER='master_user', MASTER_PASSWORD='master_password', MASTER_LOG_FILE='mysql-bin.000005', MASTER_LOG_POS=72;
+SET GLOBAL read_only=1;
+START SLAVE;
+
