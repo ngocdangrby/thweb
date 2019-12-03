@@ -1,67 +1,69 @@
-var formidable = require('formidable'),
-    http = require('http'),
-    util = require('util'),
-    fs = require('fs'),
-    mysql = require('mysql');
+var formidable = require("formidable"),
+  http = require("http"),
+  util = require("util"),
+  fs = require("fs"),
+  mysql = require("mysql");
 var con = mysql.createConnection({
-    host: "localhost",
-    user: "root",
-    password: "123123",
-    database: "thweb"
+  host: "localhost",
+  user: "a17020077",
+  password: "123456",
+  database: "a17020077"
 });
+var bodyParser = require("body-parser");
 
-insert_db = (data, conn) => {
-    let lines = data.split(/\r\n|\r|\n/)
-    let len = lines.length
-    for (i = 0; i < len; i++) {
-        var sql = "INSERT INTO users (username, age, email) VALUES (" + lines[i] + ")";
-        conn.query(sql, function (err, result) {
-            if (err) throw err;
-            console.log("1 record inserted");
-        });
-    }
+insert_db = (name, author, conn) => {
+  let sql =
+    "INSERT INTO users (name, author, pushlished_date) VALUES (" +
+    name +
+    "," +
+    author +
+    ");";
+  conn.query(sql, function(err, result) {
+    if (err) throw err;
+    console.log("1 book inserted");
+  });
+};
+
+
+select_books = () =>{
+  let sql = "select * from book";
+  con.query(sql, function (err, result, fields) {
+    if (err) throw err;
+    return console.log(result);
+  });
 }
-http.createServer(function (req, res) {
-    if (req.url == '/upload' && req.method.toLowerCase() == 'post') {
-        // parse a file upload
-        var form = new formidable.IncomingForm();
-        form.encoding = 'utf-8';
-        form.uploadDir = "upload";
-        form.keepExtensions = true;
 
-        con.connect(function (err) {
-            if (err) throw err;
-            console.log("Connected!");
-        });
+fs.readFile("./index.html", function(err, html) {
+  if (err) {
+    throw err;
+  }
+  let book_name = "";
+  let author_name = "";
+  http
+    .createServer(function(req, res) {
+      if (req.url == "/create-book" && req.method.toLowerCase() == "post") {
+        book_name = "ten sach";
+        author_name = "tac gia";
+        console.log("name la: " + book_name);
+        console.log("author:" + author_name);
 
-        form.parse(req, function (err, fields, files) {
-            // //readfile
-            fs.readFile(files.upload.path, 'utf8', function (err, data) {
-                if (err) throw err;
-                console.log('OK: ' + files.upload.path);
-                console.log(data);
-                insert_db(data, con);
-            });
-
-
-            res.writeHead(200, { 'content-type': 'text/plain' });
-            res.write('received upload:\n\n');
-            res.end(util.inspect({ fields: fields, files: files }));
-
-        });
-
+        // con.connect(function(err) {
+        //   if (err) throw err;
+        //   console.log("Connected!");
+        // });
+        // insert_db(book_name, author_name);
         return;
-    }
-
-    // show a file upload form
-    res.writeHead(200, { 'content-type': 'text/html' });
-    res.end(
-        '<form action="/upload" enctype="multipart/form-data" method="post">' +
-        '<input type="text" name="title"><br>' +
-        '<input type="file" name="upload" multiple="multiple"><br>' +
-        '<input type="submit" value="Upload">' +
-        '</form>'
-    );
-}).listen(8080);
-
-
+      }
+      if (req.url == "/books") {
+        res.writeHead(200, { "content-type": "text/html" });
+        res.write("abc");
+      }
+      else{
+        res.writeHead(200, { "content-type": "text/html" });
+        res.end(html);
+      }
+      // show a file upload form
+      
+    })
+    .listen(8080);
+});
